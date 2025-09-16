@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Kalkulator BAL – komórkowość i różnicowanie</title>
+  <style>
+    :root{
+      --bg:#0b0c10; --card:#121319; --muted:#9aa3af; --text:#e5e7eb; --accent:#60a5fa; --ok:#34d399; --warn:#f59e0b;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{margin:0;background:linear-gradient(180deg,#0b0c10,#0b0c10 60%,#0f172a);
+         color:var(--text);font:16px/1.4 system-ui,Segoe UI,Roboto,Ubuntu,Helvetica,Arial,sans-serif}
+    .wrap{max-width:980px;margin:24px auto;padding:16px}
+    h1{font-size:clamp(20px,3.6vw,28px);margin:0 0 12px 0}
+    p.sub{margin:0 0 16px 0;color:var(--muted)}
+    .grid{display:grid;grid-template-columns:repeat(12,1fr);gap:14px}
+    .card{background:var(--card);border:1px solid #1f2430;border-radius:16px;box-shadow:0 6px 24px rgba(0,0,0,.35)}
+    .card h2{font-size:16px;margin:0 0 8px 0;color:#c7d2fe}
+    .pad{padding:16px}
+    label{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;margin:8px 0}
+    label span{color:var(--muted)}
+    input[type=number]{width:140px;background:#0e1117;border:1px solid #293244;color:var(--text);
+      border-radius:12px;padding:8px 10px;font-size:15px;outline:none}
+    input[type=number]:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(96,165,250,.25)}
+    small.hint{display:block;color:var(--muted);margin-top:6px}
+    .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+    .kpi{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+    .kpi .item{background:#0f1320;border:1px solid #1f2635;border-radius:14px;padding:12px}
+    .kpi .item .val{font-size:20px;font-weight:700}
+    .kpi .item .lbl{color:var(--muted);font-size:13px}
+    table{width:100%;border-collapse:collapse}
+    th,td{padding:8px 10px;border-bottom:1px solid #1f2430;text-align:right}
+    th:nth-child(1),td:nth-child(1){text-align:left}
+    tfoot td{font-weight:700}
+    .muted{color:var(--muted)}
+    .pill{display:inline-block;padding:2px 8px;border-radius:999px;border:1px solid #2b3344;font-size:12px;color:#cbd5e1}
+    .btn{appearance:none;border:1px solid #2b3344;background:#0f1320;color:var(--text);padding:10px 14px;border-radius:12px;cursor:pointer;font-weight:600}
+    .btn:hover{border-color:#3b455a}
+    .btn.primary{background:#1e293b;border-color:#334155}
+    .btn.copy{background:#111827;border-color:#374151}
+    .ok{color:var(--ok)} .warn{color:var(--warn)}
+    .footer{color:var(--muted);font-size:13px;margin-top:10px}
+    @media (max-width:840px){.kpi{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Kalkulator BAL – komórkowość i różnicowanie</h1>
+    <p class="sub">Założenia domyślne: liczysz w polu <b>1&nbsp;mm²</b>. Cały preparat ma <b>31&nbsp;mm²</b> i pochodzi z <b>80&nbsp;µL</b> materiału. Wyniki przeliczane są na <b>1&nbsp;mL</b>.</p>
+
+    <div class="grid">
+      <section class="card pad" style="grid-column: span 6;">
+        <h2>1) Zliczenia w polu reprezentatywnym (1&nbsp;mm²)</h2>
+        <label><span>Makrofagi</span><input class="cell-input" id="mac" type="number" inputmode="numeric" min="0" step="1" value="0"/></label>
+        <label><span>Limfocyty</span><input class="cell-input" id="lim" type="number" inputmode="numeric" min="0" step="1" value="0"/></label>
+        <label><span>Neutrofile</span><input class="cell-input" id="neu" type="number" inputmode="numeric" min="0" step="1" value="0"/></label>
+        <label><span>Eozynofile</span><input class="cell-input" id="eos" type="number" inputmode="numeric" min="0" step="1" value="0"/></label>
+        <small class="hint">Enter przechodzi do kolejnego pola. Użyj Tab/Shift+Tab dla szybkiej nawigacji.</small>
+      </section>
+
+      <section class="card pad" style="grid-column: span 6;">
+        <h2>2) Parametry przeliczeń</h2>
+        <div class="row">
+          <label style="flex:1"><span>Pole pomiarowe [mm²]</span><input id="areaField" type="number" min="0.1" step="0.1" value="1" /></label>
+          <label style="flex:1"><span>Powierzchnia preparatu [mm²]</span><input id="areaTotal" type="number" min="0.1" step="0.1" value="31" /></label>
+        </div>
+        <div class="row">
+          <label style="flex:1"><span>Objętość źródłowa [µL]</span><input id="volSource" type="number" min="0.1" step="0.1" value="80" /></label>
+          <label style="flex:1"><span>Docelowa objętość [mL]</span><input id="volTarget" type="number" min="0.001" step="0.001" value="1" /></label>
+        </div>
+        <small class="hint">Współczynnik objętości: 1000&nbsp;µL × (docelowa mL) / (objętość źródłowa). Domyślnie 1000/80 = 12,5.</small>
+      </section>
+
+      <section class="card pad" style="grid-column: span 12;">
+        <h2>Wyniki</h2>
+        <div class="kpi" style="margin-bottom:10px">
+          <div class="item">
+            <div class="val" id="sumField">0</div>
+            <div class="lbl">Suma komórek w polu</div>
+          </div>
+          <div class="item">
+            <div class="val" id="factor">—</div>
+            <div class="lbl">Współczynnik do 1&nbsp;mL (\u00D7)</div>
+          </div>
+          <div class="item">
+            <div class="val" id="cellsPerMl">0</div>
+            <div class="lbl">Komórkowość łącznie [kom./mL]</div>
+          </div>
+        </div>
+
+        <table aria-label="Tabela wyników różnicowania">
+          <thead>
+            <tr>
+              <th>Populacja</th>
+              <th>Zliczenie</th>
+              <th>%</th>
+              <th>kom./mL</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td>Makrofagi</td><td id="macN">0</td><td id="macPct">0</td><td id="macMl">0</td></tr>
+            <tr><td>Limfocyty</td><td id="limN">0</td><td id="limPct">0</td><td id="limMl">0</td></tr>
+            <tr><td>Neutrofile</td><td id="neuN">0</td><td id="neuPct">0</td><td id="neuMl">0</td></tr>
+            <tr><td>Eozynofile</td><td id="eosN">0</td><td id="eosPct">0</td><td id="eosMl">0</td></tr>
+          </tbody>
+          <tfoot>
+            <tr><td>Razem</td><td id="sumN">0</td><td id="sumPct">100</td><td id="sumMl">0</td></tr>
+          </tfoot>
+        </table>
+
+        <div class="row" style="margin-top:12px">
+          <span class="pill" id="assumption">Założenia: 1&nbsp;mm² → <span id="areaInfo">31</span>&nbsp;mm²; 80&nbsp;µL → 1&nbsp;mL</span>
+          <button class="btn copy" id="btnCopy" type="button">Kopiuj wynik</button>
+          <button class="btn" id="btnReset" type="button">Wyczyść</button>
+        </div>
+        <div class="footer" id="footNote">Współczynnik = (pow. preparatu / pow. pola) × (docelowa objętość [µL] / objętość źródłowa [µL]) = 31 × 12,5 = 387,5.</div>
+      </section>
+    </div>
+  </div>
+
+  <script>
+    const $ = (id)=>document.getElementById(id);
+    const ids = ["mac","lim","neu","eos","areaField","areaTotal","volSource","volTarget"];
+
+    function valNum(id){
+      const el = $(id);
+      const v = el.valueAsNumber;
+      return Number.isFinite(v) ? v : 0;
+    }
+    function fmtInt(n){
+      if(!Number.isFinite(n)) return "—";
+      return Math.round(n).toLocaleString('pl-PL');
+    }
+    function fmtPct(n){
+      if(!Number.isFinite(n)) return "0,0";
+      return (Math.round(n*10)/10).toLocaleString('pl-PL', {minimumFractionDigits:1, maximumFractionDigits:1});
+    }
+    function fmtFactor(n){
+      if(!Number.isFinite(n)) return "—";
+      return (Math.round(n*1000)/1000).toLocaleString('pl-PL');
+    }
+
+    function compute(){
+      const mac = Math.max(0, valNum('mac'));
+      const lim = Math.max(0, valNum('lim'));
+      const neu = Math.max(0, valNum('neu'));
+      const eos = Math.max(0, valNum('eos'));
+      const sum = mac+lim+neu+eos;
+
+      const aField = Math.max(0.0001, valNum('areaField'));
+      const aTotal = Math.max(0.0001, valNum('areaTotal'));
+      const vSrc = Math.max(0.0001, valNum('volSource'));
+      const vTgt_mL = Math.max(0.000001, valNum('volTarget'));
+      const vTgt_uL = vTgt_mL * 1000;
+
+      const areaFactor = aTotal / aField; // np. 31
+      const volFactor  = vTgt_uL / vSrc;  // np. 1000/80 = 12,5
+      const factor = areaFactor * volFactor; // do 1 mL
+
+      // KPI
+      $("sumField").textContent = sum.toLocaleString('pl-PL');
+      $("factor").textContent   = fmtFactor(factor);
+
+      // Per-type
+      const rows = [
+        {n:mac, nId:'macN', pctId:'macPct', mlId:'macMl'},
+        {n:lim, nId:'limN', pctId:'limPct', mlId:'limMl'},
+        {n:neu, nId:'neuN', pctId:'neuPct', mlId:'neuMl'},
+        {n:eos, nId:'eosN', pctId:'eosPct', mlId:'eosMl'}
+      ];
+
+      for(const r of rows){
+        const pct = sum>0 ? (r.n/sum*100) : 0;
+        const perMl = r.n * factor; // bezpośrednio
+        $(r.nId).textContent = r.n.toLocaleString('pl-PL');
+        $(r.pctId).textContent = fmtPct(pct);
+        $(r.mlId).textContent = fmtInt(perMl);
+      }
+
+      $("sumN").textContent = sum.toLocaleString('pl-PL');
+      $("sumPct").textContent = sum>0 ? "100,0" : "0,0";
+      const totalPerMl = sum * factor;
+      $("sumMl").textContent = fmtInt(totalPerMl);
+      $("cellsPerMl").textContent = fmtInt(totalPerMl);
+
+      // Assumptions / footer
+      $("areaInfo").textContent = areaFactor.toLocaleString('pl-PL');
+      const foot = `Współczynnik = (${aTotal.toLocaleString('pl-PL')} / ${aField.toLocaleString('pl-PL')}) × (${vTgt_uL.toLocaleString('pl-PL')} / ${vSrc.toLocaleString('pl-PL')}) = ${fmtFactor(areaFactor)} × ${fmtFactor(volFactor)} = ${fmtFactor(factor)}.`;
+      $("footNote").textContent = foot;
+    }
+
+    // Copy to clipboard
+    async function copyResult(){
+      const sum = $("sumN").textContent;
+      const macPct = $("macPct").textContent, limPct=$("limPct").textContent, neuPct=$("neuPct").textContent, eosPct=$("eosPct").textContent;
+      const macMl = $("macMl").textContent, limMl=$("limMl").textContent, neuMl=$("neuMl").textContent, eosMl=$("eosMl").textContent;
+      const totalMl = $("sumMl").textContent;
+      const factorTxt = $("factor").textContent;
+      const aField = $("areaField").value, aTotal=$("areaTotal").value, vSrc=$("volSource").value, vTgt=$("volTarget").value;
+      const text = `BAL – wynik\n`+
+`Suma w polu (${aField} mm²): ${sum}\n`+
+`Różnicowanie: makrofagi ${macPct}%, limfocyty ${limPct}%, neutrofile ${neuPct}%, eozynofile ${eosPct}%\n`+
+`Komórkowość łącznie: ${totalMl} kom./mL\n`+
+`Szac. kom./mL: makrofagi ${macMl}, limfocyty ${limMl}, neutrofile ${neuMl}, eozynofile ${eosMl}\n`+
+`Założenia: pole ${aField} mm² → preparat ${aTotal} mm²; objętość ${vSrc} µL → ${vTgt} mL; współczynnik ×${factorTxt}`;
+      try{
+        await navigator.clipboard.writeText(text);
+        $("btnCopy").textContent = "Skopiowano ✓";
+        setTimeout(()=>$("btnCopy").textContent="Kopiuj wynik", 1600);
+      }catch(e){
+        alert("Nie udało się skopiować do schowka. Skopiuj ręcznie:\n\n"+text);
+      }
+    }
+
+    function resetAll(){
+      ['mac','lim','neu','eos'].forEach(id=>$(id).value = 0);
+      $("areaField").value = 1;
+      $("areaTotal").value = 31;
+      $("volSource").value = 80;
+      $("volTarget").value = 1;
+      compute();
+    }
+
+    // Enter → next input
+    document.addEventListener('keydown', (ev)=>{
+      if(ev.key === 'Enter'){
+        const focusables = ids.map(id=>$(id));
+        const i = focusables.indexOf(document.activeElement);
+        if(i>-1){
+          ev.preventDefault();
+          const next = focusables[i+1] || $("btnCopy");
+          next.focus();
+        }
+      }
+    });
+
+    ids.forEach(id => $(id).addEventListener('input', compute));
+    $("btnCopy").addEventListener('click', copyResult);
+    $("btnReset").addEventListener('click', resetAll);
+
+    compute();
+  </script>
+</body>
+</html>
