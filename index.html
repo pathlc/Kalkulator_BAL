@@ -37,7 +37,7 @@
     .btn:hover{background:#e0e7ff}
     .btn.copy{background:#2563eb;color:#fff;border:none}
     .footer{color:#6b7280;font-size:13px;margin-top:10px}
-    textarea{width:100%;min-height:220px;background:#f9fafb;color:var(--text);border:1px solid #cbd5e1;border-radius:8px;padding:12px;font:14px/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace}
+    textarea{width:100%;min-height:220px;background:#f9fafb;color:#111827;border:1px solid #cbd5e1;border-radius:8px;padding:12px;font:14px/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace}
     .controls{display:grid;grid-template-columns:repeat(12,1fr);gap:10px}
     .controls .col{grid-column:span 6}
     .tests{background:#f9fafb;border:1px dashed #cbd5e1;border-radius:8px;padding:12px;color:#111827}
@@ -63,14 +63,19 @@
       <section class="card pad" style="grid-column: span 7;">
         <h2>2) Parametry przeliczeń</h2>
         <div class="row">
-          <label style="flex:1"><span>Pole pomiarowe [mm²]</span><input id="areaField" type="number" min="0.1" step="0.1" value="1" /></label>
-          <label style="flex:1"><span>Powierzchnia preparatu [mm²]</span><input id="areaTotal" type="number" min="0.1" step="0.1" value="31" /></label>
+          <label style="flex:1"><span>Pole pomiarowe [mm²]</span><input id="areaField" type="number" min="0" step="1" value="1" /></label>
+          <label style="flex:1"><span>Powierzchnia preparatu [mm²]</span><input id="areaTotal" type="number" min="0" step="1" value="31" /></label>
         </div>
         <div class="row">
-          <label style="flex:1"><span>Objętość źródłowa [µL]</span><input id="volSource" type="number" min="0.1" step="0.1" value="80" /></label>
-          <label style="flex:1"><span>Docelowa objętość [mL]</span><input id="volTarget" type="number" min="0.001" step="0.001" value="1" /></label>
+          <label style="flex:1"><span>Objętość źródłowa [µL]</span><input id="volSource" type="number" min="0" step="1"  /></label>
+          <label style="flex:1"><span>Docelowa objętość [mL]</span><input id="volTarget" type="number" min="0" step="1" value="1" /></label>
+        </div>
+        <div class="row" style="margin-top:8px">
+          <label style="flex:1"><span>Objętość BAL (mL)</span><input id="volBAL" type="number" min="0" step="10" value="80" placeholder="" /></label>
+          <label style="flex:1"><span>Rozcieńczenie osadu (mL)</span><input id="volResusp" type="number" min="0" step="5" value="20" /></label>
         </div>
         <small class="hint">Współczynnik objętości: 1000&nbsp;µL × (docelowa mL) / (objętość źródłowa). Domyślnie 1000/80 = 12,5.</small>
+        <small class="hint">Dodatkowa korekta komórkowości × (B/A): domyślnie uwzględniona (B = rozcieńczenie osadu, A = objętość BAL).</small>
       </section>
 
       <section class="card pad" style="grid-column: span 12;">
@@ -166,7 +171,7 @@
 
   <script>
     const $ = (id)=>document.getElementById(id);
-    const ids = ["mac","lim","neu","eos","areaField","areaTotal","volSource","volTarget","cellularityQual","kDigits","addIronNote","addBronchialEpith","autoQual"];
+    const ids = ["mac","lim","neu","eos","areaField","areaTotal","volSource","volTarget","volBAL","volResusp","cellularityQual","kDigits","addIronNote","addBronchialEpith","autoQual"];
 
     function valNum(id){ const el=$(id); const v=el?el.valueAsNumber:NaN; return Number.isFinite(v)?v:0; }
     function fmtInt(n){ if(!Number.isFinite(n)) return "—"; return Math.round(n).toLocaleString('pl-PL'); }
@@ -186,12 +191,17 @@
       $("sumField").textContent=sum.toLocaleString('pl-PL');
       $("factor").textContent=fmtFactor(factor);
 
+      // Korekta × (B/A) — włączona domyślnie, jeśli A podano
+      const A = Math.max(0.0001, valNum('volBAL'));
+      const B = Math.max(0.0001, valNum('volResusp'));
+      let correction = 1; if (A > 0) correction = B / A;
+
       const rows=[{n:mac,nId:'macN',pctId:'macPct',mlId:'macMl'},{n:lim,nId:'limN',pctId:'limPct',mlId:'limMl'},{n:neu,nId:'neuN',pctId:'neuPct',mlId:'neuMl'},{n:eos,nId:'eosN',pctId:'eosPct',mlId:'eosMl'}];
-      for(const r of rows){ const pct=sum>0?(r.n/sum*100):0; const perMl=r.n*factor; $(r.nId).textContent=r.n.toLocaleString('pl-PL'); $(r.pctId).textContent=fmtPct(pct); $(r.mlId).textContent=fmtInt(perMl); }
+      for(const r of rows){ const pct=sum>0?(r.n/sum*100):0; const perMl=r.n*factor*correction; $(r.nId).textContent=r.n.toLocaleString('pl-PL'); $(r.pctId).textContent=fmtPct(pct); $(r.mlId).textContent=fmtInt(perMl); }
 
       $("sumN").textContent=sum.toLocaleString('pl-PL');
       $("sumPct").textContent=sum>0?"100,0":"0,0";
-      const totalPerMl=sum*factor; $("sumMl").textContent=fmtInt(totalPerMl); $("cellsPerMl").textContent=fmtInt(totalPerMl);
+      const totalPerMl = sum*factor*correction; $("sumMl").textContent=fmtInt(totalPerMl); $("cellsPerMl").textContent=fmtInt(totalPerMl);
 
       $("areaInfo").textContent=(aTotal/aField).toLocaleString('pl-PL');
       $("footNote").textContent=`Współczynnik = (${aTotal.toLocaleString('pl-PL')} / ${aField.toLocaleString('pl-PL')}) × (${vTgt_uL.toLocaleString('pl-PL')} / ${vSrc.toLocaleString('pl-PL')}) = ${fmtFactor(areaFactor)} × ${fmtFactor(volFactor)} = ${fmtFactor(factor)}.`;
@@ -211,7 +221,10 @@
 
       const aField=Math.max(0.0001,valNum('areaField')); const aTotal=Math.max(0.0001,valNum('areaTotal')); const vSrc=Math.max(0.0001,valNum('volSource')); const vTgt_mL=Math.max(0.000001,valNum('volTarget')); const vTgt_uL=vTgt_mL*1000;
       const areaFactor=aTotal/aField, volFactor=vTgt_uL/vSrc, factor=areaFactor*volFactor;
-      const sum=valNum('mac')+valNum('lim')+valNum('neu')+valNum('eos'); const totalPerMl=sum*factor; const kVal=totalPerMl/1000; const kTxt=fmtFixed(kVal,kDigits);
+      const A = Math.max(0.0001, valNum('volBAL'));
+      const B = Math.max(0.0001, valNum('volResusp'));
+      let correction = 1; if (A > 0) correction = B / A;
+      const sum=valNum('mac')+valNum('lim')+valNum('neu')+valNum('eos'); const totalPerMl=sum*factor*correction; const kVal=totalPerMl/1000; const kTxt=fmtFixed(kVal,kDigits);
 
       const qualAuto=qualFromKVal(kVal); let qualWord=qualAuto; if(auto){ $("cellularityQual").value=qualAuto; } else { qualWord=$("cellularityQual").value.trim(); } $("cellularityQual").disabled=auto;
 
@@ -247,8 +260,8 @@
     function plToFloat(s){ s=stripSpaces(s).replace(',', '.'); return parseFloat(s); }
     function textDigits(s){ return (s+"").replace(/[^0-9]/g,''); }
 
-    function snapshotState(){ return { mac:$("mac").value, lim:$("lim").value, neu:$("neu").value, eos:$("eos").value, areaField:$("areaField").value, areaTotal:$("areaTotal").value, volSource:$("volSource").value, volTarget:$("volTarget").value, cellularityQual:$("cellularityQual").value, kDigits:$("kDigits").value, addIronNote:$("addIronNote").checked, addBronchialEpith:$("addBronchialEpith").checked, autoQual:$("autoQual").checked, scrollY:window.scrollY, activeId:(document.activeElement&&document.activeElement.id)?document.activeElement.id:null }; }
-    function restoreState(s){ $("mac").value=s.mac; $("lim").value=s.lim; $("neu").value=s.neu; $("eos").value=s.eos; $("areaField").value=s.areaField; $("areaTotal").value=s.areaTotal; $("volSource").value=s.volSource; $("volTarget").value=s.volTarget; $("cellularityQual").value=s.cellularityQual; $("kDigits").value=s.kDigits; $("addIronNote").checked=s.addIronNote; $("addBronchialEpith").checked=s.addBronchialEpith; $("autoQual").checked=s.autoQual; compute(); try{ if(s.activeId) $(s.activeId).focus(); window.scrollTo(0, s.scrollY||0);}catch(e){} }
+    function snapshotState(){ return { mac:$("mac").value, lim:$("lim").value, neu:$("neu").value, eos:$("eos").value, areaField:$("areaField").value, areaTotal:$("areaTotal").value, volSource:$("volSource").value, volTarget:$("volTarget").value, volBAL:$("volBAL").value, volResusp:$("volResusp").value, cellularityQual:$("cellularityQual").value, kDigits:$("kDigits").value, addIronNote:$("addIronNote").checked, addBronchialEpith:$("addBronchialEpith").checked, autoQual:$("autoQual").checked, scrollY:window.scrollY, activeId:(document.activeElement&&document.activeElement.id)?document.activeElement.id:null }; }
+    function restoreState(s){ $("mac").value=s.mac; $("lim").value=s.lim; $("neu").value=s.neu; $("eos").value=s.eos; $("areaField").value=s.areaField; $("areaTotal").value=s.areaTotal; $("volSource").value=s.volSource; $("volTarget").value=s.volTarget; if('volBAL' in s) $("volBAL").value=s.volBAL; if('volResusp' in s) $("volResusp").value=s.volResusp; $("cellularityQual").value=s.cellularityQual; $("kDigits").value=s.kDigits; $("addIronNote").checked=s.addIronNote; $("addBronchialEpith").checked=s.addBronchialEpith; $("autoQual").checked=s.autoQual; compute(); try{ if(s.activeId) $(s.activeId).focus(); window.scrollTo(0, s.scrollY||0);}catch(e){} }
     function runTests(){ const __saved=snapshotState(); try{ __runTestsCore(); } finally { restoreState(__saved); } }
 
     function __runTestsCore(){
