@@ -67,15 +67,13 @@
           <label style="flex:1"><span>Powierzchnia preparatu [mm²]</span><input id="areaTotal" type="number" min="0" step="1" value="31" /></label>
         </div>
         <div class="row">
-          <label style="flex:1"><span>Objętość źródłowa [mL]</span><input id="volSource" type="number" min="0" step="1"  /></label>
+          <label style="flex:1"><span>Objętość źródłowa [mL]</span><input id="volSource" type="number" min="0" step="1" value="20" /></label>
           <label style="flex:1"><span>Docelowa objętość [mL]</span><input id="volTarget" type="number" min="0" step="1" value="1" /></label>
         </div>
         <div class="row" style="margin-top:8px">
           <label style="flex:1"><span>Objętość BAL (µL)</span><input id="volBAL" type="number" min="0" step="10" value="80" placeholder="" /></label>
           <label style="flex:1"><span>Rozcieńczenie osadu (mL)</span><input id="volResusp" type="number" min="0" step="5" value="20" /></label>
         </div>
-        <small class="hint">Współczynnik objętości: 1000&nbsp;µL × (docelowa mL) / (objętość źródłowa). Domyślnie 1000/80 = 12,5.</small>
-        <small class="hint">Dodatkowa korekta komórkowości × (B/A): domyślnie uwzględniona (B = rozcieńczenie osadu, A = objętość BAL).</small>
       </section>
 
       <section class="card pad" style="grid-column: span 12;">
@@ -117,7 +115,7 @@
         </table>
 
         <div class="row" style="margin-top:12px">
-          <span class="pill" id="assumption">Założenia: 1&nbsp;mm² → <span id="areaInfo">31</span>&nbsp;mm²; 80&nbsp;µL → 1&nbsp;mL</span>
+          <!-- <span class="pill" id="assumption">Założenia: 1&nbsp;mm² → <span id="areaInfo">31</span>&nbsp;mm²; 80&nbsp;µL → 1&nbsp;mL</span> -->
           <button class="btn" id="btnReset" type="button">Wyczyść</button>
         </div>
         <div class="footer" id="footNote">Współczynnik = (pow. preparatu / pow. pola) × (docelowa objętość [µL] / objętość źródłowa [µL]) = 31 × 12,5 = 387,5.</div>
